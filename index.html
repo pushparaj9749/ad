@@ -13,6 +13,16 @@
 </head>
 <body id="top">
 
+  <!-- ============ SAAS APP (local or Supabase cloud) ============ -->
+  <div class="saas-shell" id="saas-root">
+    <div id="saas-view"></div>
+    <div id="saas-loading" class="saas-loading" aria-live="polite">
+      <span class="saas-loading-mark">ad<span>.</span></span>
+      <span class="saas-loading-label">booting studio&hellip;</span>
+    </div>
+  </div>
+
+  <div class="site-content">
   <div class="grain" aria-hidden="true"></div>
   <div class="cursor-dot" aria-hidden="true"></div>
   <div class="cursor-ring" aria-hidden="true"></div>
@@ -24,7 +34,8 @@
       <a href="#services">Services</a>
       <a href="#studio">Studio</a>
     </nav>
-    <a class="btn btn-outline magnetic" href="#contact">Start a project</a>
+    <a class="btn btn-outline magnetic" href="#/app">Studio OS</a>
+    <a class="btn btn-solid magnetic" href="#contact">Start a project</a>
   </header>
 
   <main>
@@ -84,6 +95,29 @@
         </div>
       </div>
     </div>
+
+    <!-- ============ SHOWREEL (scroll-scrubbed video) ============ -->
+    <section id="reel" class="reel" aria-label="Showreel">
+      <div class="reel-frame">
+        <video
+          class="reel-video"
+          src="video/showreel.mp4"
+          poster="video/showreel-poster.jpg"
+          muted
+          playsinline
+          webkit-playsinline
+          preload="auto"
+        ></video>
+      </div>
+      <div class="reel-overlay">
+        <p class="reel-label">(00) &mdash; Showreel &rsquo;26</p>
+        <h2 class="reel-title">PLAY IT<br /><em>LOUD</em></h2>
+        <div class="reel-hud">
+          <span class="reel-time">00:00:00 / 00:10:24</span>
+          <span class="reel-hint">Scroll to scrub &darr;</span>
+        </div>
+      </div>
+    </section>
 
     <!-- ============ WORK ============ -->
     <section id="work" class="section">
@@ -228,9 +262,9 @@
     <div class="footer-meta reveal">
       <a href="mailto:hello@ad.studio">hello@ad.studio</a>
       <nav class="footer-social" aria-label="Social">
+        <a href="#/app">Studio OS</a>
         <a href="#" rel="noopener">Instagram</a>
         <a href="#" rel="noopener">LinkedIn</a>
-        <a href="#" rel="noopener">Behance</a>
       </nav>
     </div>
     <div class="footer-bottom">
@@ -238,7 +272,20 @@
       <p>Durgapur, West Bengal &mdash; দুর্গাপুর</p>
     </div>
   </footer>
+  </div><!-- /.site-content -->
 
+  <script src="js/vendor/gsap.min.js"></script>
+  <script src="js/vendor/ScrollTrigger.min.js"></script>
+  <script src="js/vendor/lenis.min.js"></script>
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/vendor/591.supabase.js"></script>
+  <script src="js/app/config.js"></script>
+  <script src="js/app/db-local.js"></script>
+  <script src="js/app/db-cloud.js"></script>
+  <script src="js/app/ui.js"></script>
+  <script src="js/app/store.js"></script>
+  <script src="js/app/views.js"></script>
+  <script src="js/app/app.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
