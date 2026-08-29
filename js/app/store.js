@@ -21,43 +21,78 @@
     initing: null,
 
     init: function () {
+      if (Store.ready) return Promise.resolve(true);
       if (Store.initing) return Store.initing;
+
       Store.initing = (function () {
+        var stored = null;
         try {
-          var stored = window.localStorage.getItem(MODE_KEY);
-          if (stored !== "cloud" && stored !== "local") window.localStorage.setItem(MODE_KEY, "local");
-          Store.mode = stored === "cloud" ? "cloud" : "local";
+          stored = window.localStorage.getItem(MODE_KEY);
         } catch (e) {}
+
+        Store.mode = stored === "cloud" ? "cloud" : "local";
+        try {
+          if (stored !== "cloud" && stored !== "local") {
+            window.localStorage.setItem(MODE_KEY, "local");
+          }
+        } catch (e) {}
+
         if (Store.mode === "cloud") {
           var creds = A.Cloud.storedCredentials() || (window.ADSTUDIO_CONFIG || {});
           var cUrl = creds && (creds.supabaseUrl || creds.url || "");
           var cKey = creds && (creds.supabaseAnonKey || creds.anonKey || "");
+
           if (cUrl && cKey) {
-            try { A.Cloud.create(cUrl, cKey); } catch (e) {
-              A.toast("Cloud config invalid: " + e.message, "err");
+            try {
+              A.Cloud.create(cUrl, cKey);
+            } catch (e) {
+              A.toast("Cloud config invalid: " + (e.message || e), "err");
               Store.setMode("local");
             }
           } else {
-            A.toast("No cloud credentials found \u2014 switched to Local mode.", "warn");
+            A.toast("No cloud credentials found — switched to Local mode.", "warn");
             Store.setMode("local");
           }
         }
+
         if (Store.mode === "local") {
-          return A.Db.init().then(function () { return Store.seedIfEmpty(); });
+          return A.Db.init()
+            .then(function () {
+              return Store.seedIfEmpty();
+            })
+            .catch(function (err) {
+              console.error("[ad.studio] local data setup failed", err);
+              A.toast("Local data setup failed — continuing with empty data.", "warn");
+              return false;
+            });
         }
+
         return Promise.resolve(true);
-      })().then(function () {
-        Store.ready = true;
-        if (Store.mode === "cloud") {
-          return A.Cloud.sessionUser().then(function (u) {
-            A.Cloud.setUser(u);
-            Store.user = u;
-            return u;
-          });
-        }
-        Store.user = null;
-        return null;
-      });
+      })()
+        .then(function () {
+          Store.ready = true;
+          if (Store.mode === "cloud") {
+            return A.Cloud.sessionUser().then(function (u) {
+              A.Cloud.setUser(u);
+              Store.user = u;
+              return u;
+            });
+          }
+          Store.user = null;
+          return null;
+        })
+        .catch(function (err) {
+          // Never leave the application stuck behind the boot loader.
+          Store.mode = "local";
+          Store.ready = true;
+          Store.user = null;
+          Store.initing = null;
+          try { window.localStorage.setItem(MODE_KEY, "local"); } catch (e) {}
+          console.error("[ad.studio] store init failed", err);
+          try { A.toast("Startup recovery: Local mode enabled.", "warn"); } catch (e) {}
+          return false;
+        });
+
       return Store.initing;
     },
 
@@ -84,7 +119,7 @@
     },
     engineLabel: function () {
       if (Store.mode === "cloud") return "Supabase (multi-user)";
-      return "Local \u00b7 " + A.Db.engineName();
+      return "Local · " + A.Db.engineName();
     },
 
     subscribe: function (cb) {
@@ -105,29 +140,29 @@
         if (!empty) return false;
         var now = ago(0);
         var projects = [
-          { id: A.uid(), name: "VOLT \u2014 Run Louder", slug: "volt-run-louder", client: "VOLT inc.", status: "in-production", brief: "Global sneaker drop. Hero film, OOH takeover, social engine. Copy: \u201cRun Louder.\u201d", due_date: todayPlus(12), color: "#d4ff2f", pos: 0, created_at: now, updated_at: now },
-          { id: A.uid(), name: "BR\u00dcM \u2014 Black by Default", slug: "brum-black-by-default", client: "BR\u00dcM Coffee", status: "in-review", brief: "Cold brew launch. Identity refresh, packaging system, launch film.", due_date: todayPlus(21), color: "#ff8a3d", pos: 1, created_at: now, updated_at: now },
-          { id: A.uid(), name: "SOLSTICE \u2014 48 Hours of Loud", slug: "solstice-48-hours", client: "SOLSTICE Fest", status: "live", brief: "Festival identity \u2014 motion system, wayfinding, stage visuals.", due_date: todayPlus(34), color: "#9b7bff", pos: 2, created_at: now, updated_at: now },
-          { id: A.uid(), name: "KOVA \u2014 Charge the Night", slug: "kova-charge-the-night", client: "KOVA Motors", status: "idea", brief: "Electric coupe reveal. CGI film, teaser drops, launch site.", due_date: todayPlus(60), color: "#5ad1ff", pos: 3, created_at: now, updated_at: now },
-          { id: A.uid(), name: "OKRA \u2014 Proof of Chaos", slug: "okra-proof-of-chaos", client: "OKRA Foods", status: "in-production", brief: "Gen-Z snack drop. Social-first campaign with creator collabs.", due_date: todayPlus(9), color: "#ff5e7a", pos: 4, created_at: now, updated_at: now },
+          { id: A.uid(), name: "VOLT — Run Louder", slug: "volt-run-louder", client: "VOLT inc.", status: "in-production", brief: "Global sneaker drop. Hero film, OOH takeover, social engine. Copy: “Run Louder.”", due_date: todayPlus(12), color: "#d4ff2f", pos: 0, created_at: now, updated_at: now },
+          { id: A.uid(), name: "BRÜM — Black by Default", slug: "brum-black-by-default", client: "BRÜM Coffee", status: "in-review", brief: "Cold brew launch. Identity refresh, packaging system, launch film.", due_date: todayPlus(21), color: "#ff8a3d", pos: 1, created_at: now, updated_at: now },
+          { id: A.uid(), name: "SOLSTICE — 48 Hours of Loud", slug: "solstice-48-hours", client: "SOLSTICE Fest", status: "live", brief: "Festival identity — motion system, wayfinding, stage visuals.", due_date: todayPlus(34), color: "#9b7bff", pos: 2, created_at: now, updated_at: now },
+          { id: A.uid(), name: "KOVA — Charge the Night", slug: "kova-charge-the-night", client: "KOVA Motors", status: "idea", brief: "Electric coupe reveal. CGI film, teaser drops, launch site.", due_date: todayPlus(60), color: "#5ad1ff", pos: 3, created_at: now, updated_at: now },
+          { id: A.uid(), name: "OKRA — Proof of Chaos", slug: "okra-proof-of-chaos", client: "OKRA Foods", status: "in-production", brief: "Gen-Z snack drop. Social-first campaign with creator collabs.", due_date: todayPlus(9), color: "#ff5e7a", pos: 4, created_at: now, updated_at: now },
         ];
         var clients = [
           { id: A.uid(), name: "Mira Sen", company: "VOLT inc.", email: "mira@volt.example", phone: "+91 90000 00001", color: "#d4ff2f", notes: "Wants loud. Hates safe. Always right about the heel tab.", created_at: now, updated_at: now },
-          { id: A.uid(), name: "Arjun Rao", company: "BR\u00dcM Coffee", email: "arjun@brum.example", phone: "+91 90000 00002", color: "#ff8a3d", notes: "Ops person. Likes decisions in writing, coffee black.", created_at: now, updated_at: now },
+          { id: A.uid(), name: "Arjun Rao", company: "BRÜM Coffee", email: "arjun@brum.example", phone: "+91 90000 00002", color: "#ff8a3d", notes: "Ops person. Likes decisions in writing, coffee black.", created_at: now, updated_at: now },
           { id: A.uid(), name: "Tara Iyer", company: "SOLSTICE Fest", email: "tara@solstice.example", phone: "+91 90000 00003", color: "#9b7bff", notes: "Line-up power user. Answers at 2am, usefully.", created_at: now, updated_at: now },
           { id: A.uid(), name: "Dev Bhattacharya", company: "KOVA Motors", email: "dev@kova.example", phone: "+91 90000 00004", color: "#5ad1ff", notes: "Engineer soul. Asks for the render farm spec.", created_at: now, updated_at: now },
         ];
         var tasks = [
           { id: A.uid(), project_id: projects[0].id, title: "Cast the hero film", column_id: "in-progress", pos: 0, tag: "film", created_at: now, updated_at: now },
-          { id: A.uid(), project_id: projects[0].id, title: "OOH \u2014 city domination plan", column_id: "backlog", pos: 0, tag: "ooh", created_at: now, updated_at: now },
-          { id: A.uid(), project_id: projects[0].id, title: "Social cutdowns \u00d7 12", column_id: "ideas", pos: 0, tag: "social", created_at: now, updated_at: now },
+          { id: A.uid(), project_id: projects[0].id, title: "OOH — city domination plan", column_id: "backlog", pos: 0, tag: "ooh", created_at: now, updated_at: now },
+          { id: A.uid(), project_id: projects[0].id, title: "Social cutdowns × 12", column_id: "ideas", pos: 0, tag: "social", created_at: now, updated_at: now },
           { id: A.uid(), project_id: projects[1].id, title: "Packaging die-lines v3", column_id: "review", pos: 0, tag: "print", created_at: now, updated_at: now },
           { id: A.uid(), project_id: projects[1].id, title: "Launch film grade pass", column_id: "in-progress", pos: 1, tag: "film", created_at: now, updated_at: now },
           { id: A.uid(), project_id: projects[1].id, title: "Taste-test video day", column_id: "done", pos: 0, tag: "social", created_at: now, updated_at: now },
-          { id: A.uid(), project_id: projects[2].id, title: "Stage visuals \u2014 motion system", column_id: "in-progress", pos: 0, tag: "motion", created_at: now, updated_at: now },
+          { id: A.uid(), project_id: projects[2].id, title: "Stage visuals — motion system", column_id: "in-progress", pos: 0, tag: "motion", created_at: now, updated_at: now },
           { id: A.uid(), project_id: projects[2].id, title: "Wayfinding signage", column_id: "backlog", pos: 1, tag: "print", created_at: now, updated_at: now },
           { id: A.uid(), project_id: projects[2].id, title: "Line-up announcement kit", column_id: "done", pos: 0, tag: "social", created_at: now, updated_at: now },
-          { id: A.uid(), project_id: projects[3].id, title: "CGI teaser \u2014 6s loop", column_id: "ideas", pos: 1, tag: "cgi", created_at: now, updated_at: now },
+          { id: A.uid(), project_id: projects[3].id, title: "CGI teaser — 6s loop", column_id: "ideas", pos: 1, tag: "cgi", created_at: now, updated_at: now },
           { id: A.uid(), project_id: projects[3].id, title: "Launch site sitemap", column_id: "backlog", pos: 2, tag: "web", created_at: now, updated_at: now },
           { id: A.uid(), project_id: projects[4].id, title: "Creator shortlist", column_id: "in-progress", pos: 0, tag: "talent", created_at: now, updated_at: now },
           { id: A.uid(), project_id: projects[4].id, title: "Drop calendar Q4", column_id: "ideas", pos: 2, tag: "strategy", created_at: now, updated_at: now },
@@ -215,14 +250,14 @@
     },
   };
 
-      A.Cloud.onAuthStateChange(function (event, user) {
+  A.Cloud.onAuthStateChange(function (event, user) {
     if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
       Auth.user = user;
       Store.user = user;
       A.Cloud.setUser(user);
       Auth.state = user ? "signed-in" : "signed-out";
       if (user) {
-        A.toast("Signed in \u2014 cloud data synced", "ok");
+        A.toast("Signed in — cloud data synced", "ok");
         A.runRouter();
       }
     } else if (event === "SIGNED_OUT") {
